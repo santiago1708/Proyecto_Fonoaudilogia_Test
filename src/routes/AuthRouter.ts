@@ -32,4 +32,11 @@ routerAuth.post('/login',
     handleInputErrors,
     AuthController.login)
 
+routerAuth.post('/forgot-password',
+    body('email')
+        .isEmail().withMessage('El correo electrónico no es válido')
+        .notEmpty().withMessage('El correo electrónico es un campo obligatorio'),
+    handleInputErrors,
+    AuthController.forgotPassword)
+
 export default routerAuth;

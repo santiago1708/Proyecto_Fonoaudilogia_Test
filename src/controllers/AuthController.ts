@@ -2,7 +2,7 @@ import type { Request, Response } from 'express'
 import User from '../models/User'
 import { comparePassword, hashPassword } from '../utils/auth'
 import { generateToken } from '../utils/token'
-import { enviarCorreoConfirmacion } from '../config/resend'
+import { enviarCorreoConfirmacion, enviarCorreoRecuperacion } from '../config/resend'
 import { generateJWT } from '../utils/jwt'
 
 export class AuthController {
@@ -87,4 +87,26 @@ export class AuthController {
         }
     }
 
+    static forgotPassword = async (req: Request, res: Response) => {
+        const { email } = req.body
+        try {
+            const user = await User.findOne({ where : { email } })
+            if(!user) {
+                const error = new Error('Correo electrónico no registrado')
+                res.status(404).json({ error: error.message })
+                return
+            }
+
+            user.token = generateToken()
+            await user.save()
+            
+            await enviarCorreoRecuperacion(user.email, user.name, user.token)
+
+            res.json({ message: 'Correo de recuperación enviado exitosamente' })
+        } catch (e) {
+            // console.log(e)
+            const error = new Error('Hubo un error')
+            res.status(500).json({ error: error.message })
+        }
+    }
 }
