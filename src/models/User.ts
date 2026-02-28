@@ -1,14 +1,14 @@
-import {Model, Table, Column, DataType, Default, Unique, AllowNull} from 'sequelize-typescript'
+import {Model, Table, Column, DataType, Default, Unique, AllowNull, HasMany} from 'sequelize-typescript'
+import Kid from './Kid'
 
 @Table({
     tableName: 'user'
 })
 
-export class User extends Model {
+class User extends Model {
     @AllowNull(false)
     @Column({
-        type: DataType.STRING(50),
-        allowNull: false
+        type: DataType.STRING(50)
     })
     declare name: string
 
@@ -25,6 +25,12 @@ export class User extends Model {
     })
     declare email: string
 
+    @AllowNull(false)
+    @Column({
+        type: DataType.ENUM('Madre', 'Padre', 'Cuidador', 'Profesional')
+    })
+    declare parentesco: string
+
     @Column({
         type: DataType.STRING(6)
     })
@@ -35,6 +41,9 @@ export class User extends Model {
         type: DataType.BOOLEAN
     })
     declare confirmed: boolean
+
+    @HasMany(() => Kid)
+    declare kids: Kid[]
 }
 
 export default User
