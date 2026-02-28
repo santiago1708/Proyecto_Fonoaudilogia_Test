@@ -55,4 +55,36 @@ export class AuthController {
         }
     }
 
+    static login = async (req: Request, res: Response) => {
+        const { email, password } = req.body
+
+        try {
+            const user = await User.findOne({ where: { email } })
+
+            if (!user) {
+                const error = new Error('Correo electrónico no registrado')
+                res.status(404).json({ error: error.message })
+                return
+            }
+
+            if (!user.confirmed) {
+                const error = new Error('Por favor, confirma tu correo electrónico antes de iniciar sesión')
+                res.status(403).json({ error: error.message })
+                return
+            }
+
+            const passwordCorrect = await comparePassword(password, user.password)
+            if (!passwordCorrect) {
+                const error = new Error('Contraseña incorrecta')
+                res.status(401).json({ error: error.message })
+                return
+            }
+            res.json(generateJWT(user.id))
+        } catch (e) {
+            // console.log(e)
+            const error = new Error('Hubo un error')
+            res.status(500).json({ error: error.message })
+        }
+    }
+
 }

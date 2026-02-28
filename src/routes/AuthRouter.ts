@@ -22,4 +22,14 @@ routerAuth.post('/confirm-email',
     handleInputErrors,
     AuthController.confirmEmail)
 
+routerAuth.post('/login', 
+    body('email')
+        .isEmail().withMessage('El correo electrónico no es válido')
+        .notEmpty().withMessage('El correo electrónico es un campo obligatorio'),
+    body('password')
+        .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+        .notEmpty().withMessage('La contraseña es un campo obligatorio'),
+    handleInputErrors,
+    AuthController.login)
+
 export default routerAuth;
