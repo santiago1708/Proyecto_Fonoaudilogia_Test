@@ -1,8 +1,9 @@
 import type { Request, Response } from 'express'
 import User from '../models/User'
-import { hashPassword } from '../utils/auth'
+import { comparePassword, hashPassword } from '../utils/auth'
 import { generateToken } from '../utils/token'
 import { enviarCorreoConfirmacion } from '../config/resend'
+import { generateJWT } from '../utils/jwt'
 
 export class AuthController {
     static createAccount = async (req: Request, res: Response) => {
@@ -18,7 +19,7 @@ export class AuthController {
             const user = await User.create({
                 name,
                 email,
-                password: await hashPassword(password), 
+                password: await hashPassword(password),
                 parentesco,
                 token: generateToken()
             })
@@ -27,10 +28,31 @@ export class AuthController {
 
             res.status(201).json({ message: 'Cuenta creada exitosamente. Por favor, revisa tu correo para confirmar tu cuenta.' })
         } catch (e) {
-            console.log(e)
+            // console.log(e)
             const error = new Error('Hubo un error')
             res.status(500).json({ error: error.message })
             return
         }
     }
+
+    static confirmEmail = async (req: Request, res: Response) => {
+        const { token } = req.body
+        try {
+            const user = await User.findOne({ where: { token } })
+            if (!user) {
+                const error = new Error('Token inválido')
+                res.status(404).json({ message: error.message })
+                return
+            }
+            user.confirmed = true
+            user.token = null
+            await user.save()
+            res.json({ message: 'Correo confirmado exitosamente' })
+        } catch (e) {
+            // console.log(e)
+            const error = new Error('Hubo un error')
+            res.status(500).json({ error: error.message })
+        }
+    }
+
 }
