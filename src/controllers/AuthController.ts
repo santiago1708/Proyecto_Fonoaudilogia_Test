@@ -152,4 +152,35 @@ export class AuthController {
             return
         }
     }
+
+    static user = async (req: Request, res: Response) => {
+        res.json(req.user)
+    }
+
+    static changePassword = async (req: Request, res: Response) => {
+        const { currentPassword, newPassword } = req.body
+        const user = req.user
+        try {
+            if (!user) {
+                const error = new Error('Usuario no autenticado')
+                res.status(401).json({ error: error.message })
+                return
+            }
+            const passwordCorrect = await comparePassword(currentPassword, user.password)
+            if (!passwordCorrect) {
+                const error = new Error('Contraseña actual incorrecta')
+                res.status(401).json({ error: error.message })
+                return
+            }
+
+            user.password = await hashPassword(newPassword)
+            await user.save()
+            res.json({ message: 'Contraseña cambiada exitosamente' })
+        } catch (e) {
+            console.log(e)
+            const error = new Error('Hubo un error')
+            res.status(500).json({ error: error.message })
+            return
+        }
+    }
 }

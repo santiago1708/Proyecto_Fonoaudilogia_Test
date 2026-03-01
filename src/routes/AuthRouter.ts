@@ -2,8 +2,11 @@ import { Router } from 'express'
 import { body, param } from 'express-validator'
 import { AuthController } from '../controllers/AuthController'
 import { handleInputErrors } from '../middlewares/validation'
+import { authenticateJWT } from '../middlewares/auth'
+import { Limiter } from '../config/limiter'
 
 const routerAuth = Router()
+routerAuth.use(Limiter)
 
 routerAuth.post('/create-account',
     body('name').notEmpty().withMessage('El nombre es un campo obligatorio'),
@@ -59,5 +62,25 @@ routerAuth.post('/reset-password/:token',
     handleInputErrors,
     AuthController.resetPassword
 )
+
+routerAuth.get('/profile', 
+    authenticateJWT,
+    AuthController.user
+)
+
+routerAuth.post('/change-password', 
+    authenticateJWT,
+    body('currentPassword')
+        .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+        .notEmpty().withMessage('La contraseña actual es un campo obligatorio'),
+    body('newPassword')
+        .isLength({ min: 8 }).withMessage('La nueva contraseña debe tener al menos 8 caracteres')
+        .notEmpty().withMessage('La nueva contraseña es un campo obligatorio'),
+    body('confirmNewPassword').custom((value, { req }) => value === req.body.newPassword).withMessage('Las nuevas contraseñas no coinciden'),
+    handleInputErrors,
+    AuthController.changePassword
+)
+
+
 
 export default routerAuth;
