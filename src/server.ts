@@ -3,6 +3,7 @@ import morgan from 'morgan';
 import colors from 'colors';
 import { db } from './config/db';
 import routerAuth from './routes/AuthRouter';
+import routerKid from './routes/kidRouter';
 
 async function connectDB() {
     try {
@@ -20,5 +21,6 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/api/auth', routerAuth)
+app.use('/api/kid', routerKid)
 
 export default app;
