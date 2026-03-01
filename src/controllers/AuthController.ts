@@ -90,8 +90,8 @@ export class AuthController {
     static forgotPassword = async (req: Request, res: Response) => {
         const { email } = req.body
         try {
-            const user = await User.findOne({ where : { email } })
-            if(!user) {
+            const user = await User.findOne({ where: { email } })
+            if (!user) {
                 const error = new Error('Correo electrónico no registrado')
                 res.status(404).json({ error: error.message })
                 return
@@ -99,7 +99,7 @@ export class AuthController {
 
             user.token = generateToken()
             await user.save()
-            
+
             await enviarCorreoRecuperacion(user.email, user.name, user.token)
 
             res.json({ message: 'Correo de recuperación enviado exitosamente' })
@@ -107,6 +107,49 @@ export class AuthController {
             // console.log(e)
             const error = new Error('Hubo un error')
             res.status(500).json({ error: error.message })
+        }
+    }
+
+    static validateToken = async (req: Request, res: Response) => {
+        const { token } = req.body
+        try {
+            const tokenExist = await User.findOne({ where: { token } })
+
+            if (!tokenExist) {
+                const error = new Error('Token no valido')
+                res.status(404).json({ error: error.message })
+                return
+            }
+
+            res.json('Token valido')
+
+        } catch (e) {
+            const error = new Error('Hubo un error')
+            res.status(500).json({ error: error.message })
+            return
+        }
+    }
+
+    static resetPassword = async (req: Request, res: Response) => {
+        const { password } = req.body
+        const { token } = req.params
+
+        try {
+            const user = await User.findOne({ where: { token } })
+            if (!user) {
+                const error = new Error('Token no válido')
+                res.status(404).json({ error: error.message })
+                return
+            }
+            user.password = await hashPassword(password)
+            user.token = null
+            await user.save()
+            res.json('Contraseña restablecida exitosamente')
+        } catch (e) {
+            console.log(e)
+            const error = new Error('Hubo un error')
+            res.status(500).json({ error: error.message })
+            return
         }
     }
 }
