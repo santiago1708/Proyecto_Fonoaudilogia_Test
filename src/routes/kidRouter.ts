@@ -3,9 +3,13 @@ import { KidController } from '../controllers/KidController'
 import { body } from 'express-validator'
 import { handleInputErrors } from '../middlewares/validation'
 import { authenticateJWT } from '../middlewares/auth'
+import { hasAcces, validateKidExists, validateKidId } from '../middlewares/kid'
 
 const routerKid = Router()
 routerKid.use(authenticateJWT)
+routerKid.param('kidId', validateKidId)
+routerKid.param('kidId', validateKidExists)
+routerKid.param('kidId', hasAcces)
 
 routerKid.post('/add-kid', 
     body('name')
@@ -46,5 +50,7 @@ routerKid.put('/update-kid/:kidId',
         .isString().withMessage('Las observaciones deben ser una cadena de texto'),
     handleInputErrors,
     KidController.updateKid)
+
+routerKid.delete('/delete-kid/:kidId', KidController.deleteKid)
 
 export default routerKid;

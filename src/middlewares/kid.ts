@@ -6,7 +6,7 @@ import { param, validationResult } from 'express-validator'
 declare global {
     namespace Express {
         interface Request {
-            kid?: Kid
+            kids?: Kid
         }
     }
 }
@@ -26,14 +26,25 @@ export const validateKidId = async (req: Request, res: Response, next: NextFunct
 export const validateKidExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { kidId } = req.params
-        const kidd = await Kid.findByPk(Number(kidId))
-        if (!kidd) {
-            return res.status(404).json({ error: 'Niño no encontrado' })
+        const kid = await Kid.findByPk(+kidId)
+        if (!kid) {
+            const error = new Error(`El niño con ID ${kidId} no existe`)
+            res.status(404).json({message : error.message})
+            return
         }
-        req.kid = kidd
+        req.kids = kid
         next()
     } catch (error) {
-        //console.log(error)
+        // console.log(error)
         res.status(500).json({ error: 'Ocurrio un error' })
     }   
-} 
+}
+
+export const hasAcces = async (req: Request, res: Response, next: NextFunction) => {
+    if(req.kids.userId !== req.user.id){
+        const error = new Error('No tienes permiso para acceder a este recurso')
+        res.status(403).json({message : error.message})
+        return
+    }
+    next()
+}

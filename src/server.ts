@@ -2,7 +2,7 @@ import express from 'express';
 import morgan from 'morgan';
 import colors from 'colors';
 import { db } from './config/db';
-import routerAuth from './routes/AuthRouter';
+import routerAuth from './routes/authRouter';
 import routerKid from './routes/kidRouter';
 
 async function connectDB() {

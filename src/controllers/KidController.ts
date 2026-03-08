@@ -37,34 +37,18 @@ export class KidController {
     }
 
     static getKidById = async (req: Request, res: Response) => {
-        try {
-            const kid = await Kid.findByPk(req.kid.id)
-            if (!kid) {
-                const error = new Error(`El niño ${req.kid.name} no existe`)
-                res.status(404).json({ error: error.message })
-                return
-            }
-
-            res.status(200).json(kid)
-        } catch (e) {
-            // console.log(e)
-            const error = new Error('Hubo un error')
-            res.status(500).json({ error: error.message })
-            return
-        }
+        const kid = await Kid.findByPk(req.kids.id)
+        res.status(200).json(kid)
     }
 
     static updateKid = async (req: Request, res: Response) => {
         const { name, genero, fechaNacimiento, escolarizacion, observaciones } = req.body
-        try {
-            await req.kid.update({name, genero, fechaNacimiento, escolarizacion, observaciones})
-            res.status(200).json('Niño actualizado exitosamente!' )
-        } catch (e) {
-            // console.log(e)
-            const error = new Error('Hubo un error')
-            res.status(500).json({ error: error.message })
-            return
-        }
+        await req.kids.update({ name, genero, fechaNacimiento, escolarizacion, observaciones })
+        res.status(200).json('Niño actualizado exitosamente!')
+    }
 
+    static deleteKid = async (req: Request, res: Response) => {
+        await req.kids.destroy()
+        res.status(200).json('Niño eliminado exitosamente!')
     }
 }
