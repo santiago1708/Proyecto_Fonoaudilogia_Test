@@ -35,7 +35,7 @@ export const validateKidExists = async (req: Request, res: Response, next: NextF
         req.kids = kid
         next()
     } catch (error) {
-        // console.log(error)
+         //console.log(error)
         res.status(500).json({ error: 'Ocurrio un error' })
     }   
 }

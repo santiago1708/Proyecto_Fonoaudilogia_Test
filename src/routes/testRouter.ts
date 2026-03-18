@@ -3,8 +3,10 @@ import { TestController } from '../controllers/TestController';
 import { body } from 'express-validator';
 import { handleInputErrors } from '../middlewares/validation';
 import { hasAcces, validateKidExists, validateKidId } from '../middlewares/kid';
+import { authenticateJWT } from '../middlewares/auth';
 
 const routerTest = Router();
+routerTest.use(authenticateJWT)
 
 routerTest.param('kidId', validateKidId)
 routerTest.param('kidId', validateKidExists)
