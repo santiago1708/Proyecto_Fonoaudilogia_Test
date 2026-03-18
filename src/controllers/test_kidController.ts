@@ -17,9 +17,10 @@ export class test_kidController {
                 return
             }
 
-            // en el frontend nos envía las respuestas con el puntaje de cada una
+            // 1. Sumar el puntaje automáticamente
             const puntajeTotal = respuestas.reduce((total: number, respuesta: any) => total + respuesta.puntaje, 0)
 
+            // 2. Sistema de Clasificación Automática
             let clasificacion = ''
             let mensajeAutomatico = ''
 
@@ -34,21 +35,42 @@ export class test_kidController {
                 mensajeAutomatico = 'Se identifican múltiples factores de riesgo. Se recomienda valoración fonoaudiológica.'
             }
 
+            // 🌟 3. LA MAGIA COMPARATIVA: Buscamos el test más reciente de este niño ANTES de guardar el nuevo
+            const evaluacionAnterior = await KidTest.findOne({
+                where: { kidId: req.kids.id },
+                order: [['fechaRealizacion', 'DESC'], ['createdAt', 'DESC']] // Traemos el último que hizo
+            })
+
+            let mensajeComparativo = "Esta es la primera evaluación del niño. No hay datos anteriores para comparar."
+            
+            if (evaluacionAnterior) {
+                if (puntajeTotal < evaluacionAnterior.puntaje) {
+                    mensajeComparativo = `¡Mejora! El puntaje bajó de ${evaluacionAnterior.puntaje} a ${puntajeTotal}.`
+                } else if (puntajeTotal === evaluacionAnterior.puntaje) {
+                    mensajeComparativo = `Sin cambios. El puntaje se mantiene en ${puntajeTotal} respecto a la evaluación anterior.`
+                } else {
+                    mensajeComparativo = `Empeoramiento. El puntaje subió de ${evaluacionAnterior.puntaje} a ${puntajeTotal}.`
+                }
+            }
+
+            // 4. Guardar en la base de datos la nueva evaluación
             const evaluacion = await KidTest.create({
                 kidId: req.kids.id,
                 testId: test.id,
                 clasificacion,
-                respuestas, // Sequelize guarda el JSON automáticamente
+                respuestas,
                 puntaje: puntajeTotal,
-                fechaRealizacion: dayjs().format('YYYY-MM-DD') // Fecha actual
+                fechaRealizacion: dayjs().format('YYYY-MM-DD')
             })
 
+            // 5. Devolver la respuesta súper completa al frontend
             res.status(201).json({
                 message: 'Evaluación guardada exitosamente',
                 resultados: {
                     puntajeTotal,
                     clasificacion,
                     mensaje: mensajeAutomatico,
+                    progreso: mensajeComparativo, // <-- Enviamos el análisis comparativo
                     evaluacion
                 }
             })
