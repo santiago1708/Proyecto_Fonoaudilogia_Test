@@ -1,4 +1,4 @@
-import {Model, Table, Column, DataType, AllowNull, ForeignKey, BelongsTo, BelongsToMany} from 'sequelize-typescript'
+import {Model, Table, Column, DataType, AllowNull, ForeignKey, BelongsTo, BelongsToMany, HasMany} from 'sequelize-typescript'
 import User from './User'
 import dayjs from 'dayjs'
 import Test from './Test'
@@ -79,8 +79,8 @@ class Kid extends Model {
     @BelongsTo(() => User)
     declare user: User
 
-    @BelongsToMany(() => Test, () => KidTest)
-    declare tests: Test[]
+    @HasMany(() => KidTest)
+    declare kidTests: KidTest[]
 }
 
 export default Kid

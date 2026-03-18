@@ -7,6 +7,14 @@ import Test from './Test'
 })
 
 class KidTest extends Model {
+
+    @Column({
+        type: DataType.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    })
+    declare id: number;
+
     @AllowNull(false)
     @ForeignKey(() => Kid)
     @Column({

@@ -10,7 +10,7 @@ import routerTestKid from './routes/test_kidRouter';
 async function connectDB() {
     try {
         await db.authenticate()
-        db.sync()
+        db.sync({alter: true})
         console.log(colors.green('Conexión a la base de datos establecida correctamente'));
     } catch (error) {
         console.log(colors.red('Error al conectar a la base de datos:'), error);
