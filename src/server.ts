@@ -5,6 +5,7 @@ import { db } from './config/db';
 import routerAuth from './routes/authRouter';
 import routerKid from './routes/kidRouter';
 import routerTest from './routes/testRouter';
+import routerTestKid from './routes/test_kidRouter';
 
 async function connectDB() {
     try {
@@ -24,5 +25,6 @@ app.use(express.json());
 app.use('/api/auth', routerAuth)
 app.use('/api/kid', routerKid)
 app.use('/api/test', routerTest)
+app.use('/api/evaluacion', routerTestKid)
 
 export default app;
