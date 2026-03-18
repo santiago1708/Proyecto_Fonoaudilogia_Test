@@ -4,6 +4,7 @@ import colors from 'colors';
 import { db } from './config/db';
 import routerAuth from './routes/authRouter';
 import routerKid from './routes/kidRouter';
+import routerTest from './routes/testRouter';
 
 async function connectDB() {
     try {
@@ -22,5 +23,6 @@ app.use(express.json());
 
 app.use('/api/auth', routerAuth)
 app.use('/api/kid', routerKid)
+app.use('/api/test', routerTest)
 
 export default app;
