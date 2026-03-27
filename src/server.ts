@@ -1,4 +1,5 @@
 import express from 'express'; 
+import cors from 'cors';
 import morgan from 'morgan';
 import colors from 'colors';
 import { db } from './config/db';
@@ -19,6 +20,12 @@ async function connectDB() {
 
 connectDB();
 const app = express();
+
+app.use(cors({
+    origin: process.env.VITE_FRONTEND_URL, // Ajusta al puerto de tu frontend
+    credentials: true
+}));
+
 app.use(morgan('dev'));
 app.use(express.json());
 
