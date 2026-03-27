@@ -28,7 +28,7 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
         const decoded = verifyJWT(token)
         if (typeof decoded === 'object' && decoded.id) { // Realizamos la comprobacion del tipo de dato y si existe un id
             req.user = await User.findByPk(decoded.id, {
-                attributes: ['id', 'name', 'email', 'parentesco', 'password'],
+                attributes: ['id', 'name', 'email', 'parentesco'], // Excluir campos sensibles como la contraseña
                 include: [Kid]
             })
             next()

@@ -8,7 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export const enviarCorreoConfirmacion = async (emailDestino: string, nombre: string, token: string) => {
     try {
         const data = await resend.emails.send({
-            from: 'App de Evaluación <onboarding@resend.dev>',
+            from: 'App de Evaluación <onboarding@sveladevdomain.me>',
             to: emailDestino,
             subject: 'Confirma tu cuenta - Código de Verificación',
             html: `
@@ -33,7 +33,7 @@ export const enviarCorreoConfirmacion = async (emailDestino: string, nombre: str
 export const enviarCorreoRecuperacion = async (emailDestino: string, nombre: string, token: string) => {
     try {
         const data = await resend.emails.send({
-            from: 'App de Evaluación <onboarding@resend.dev>',
+            from: 'App de Evaluación <onboarding@sveladevdomain.me>',
             to: emailDestino,
             subject: 'Recupera tu contraseña - Código de Verificación',
             html: `
