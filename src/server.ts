@@ -3,10 +3,10 @@ import cors from 'cors';
 import morgan from 'morgan';
 import colors from 'colors';
 import { db } from './config/db';
-import routerAuth from './routes/authRouter';
 import routerKid from './routes/kidRouter';
 import routerTest from './routes/testRouter';
 import routerTestKid from './routes/test_kidRouter';
+import routerAuth from './routes/authRouter';
 
 async function connectDB() {
     try {

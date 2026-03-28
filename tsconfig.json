@@ -15,7 +15,8 @@
     "declaration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "skipLibCheck": true,
   },
   "ts-node": {
     "files": true
