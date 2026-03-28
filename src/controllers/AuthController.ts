@@ -166,6 +166,10 @@ export class AuthController {
                 res.status(401).json({ error: error.message })
                 return
             }
+
+            console.log(currentPassword); // Revisa que no sea undefined
+            console.log(user.password);
+            console.log(user);
             const passwordCorrect = await comparePassword(currentPassword, user.password)
             if (!passwordCorrect) {
                 const error = new Error('Contraseña actual incorrecta')
