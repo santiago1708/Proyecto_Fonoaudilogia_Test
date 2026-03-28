@@ -81,6 +81,4 @@ routerAuth.post('/change-password',
     AuthController.changePassword
 )
 
-
-
 export default routerAuth;
