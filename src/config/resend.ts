@@ -29,6 +29,8 @@ export const enviarCorreoConfirmacion = async (emailDestino: string, nombre: str
                 </div>
             `
         });
+        // Resend devuelve el error en la respuesta en lugar de lanzarlo
+        if (data.error) throw data.error;
 
         return data;
     } catch (error) {
@@ -54,6 +56,7 @@ export const enviarCorreoRecuperacion = async (emailDestino: string, nombre: str
                 </div>
             `
         });
+        if (data.error) throw data.error;
         return data;
     } catch (error) {
         console.error('Error al enviar el correo con Resend:', error);

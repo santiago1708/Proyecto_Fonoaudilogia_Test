@@ -1,103 +1,188 @@
-import {Request, Response} from 'express'
+import { Request, Response } from 'express'
+import dayjs from 'dayjs'
 import Test from '../models/Test'
 import KidTest from '../models/KidTest'
-import dayjs from 'dayjs'
+import Kid from '../models/Kid'
+import { NIVELES, clasificarPuntaje, perfilDeParentesco } from '../data/contenido'
+import { armarRecomendaciones } from '../services/recomendaciones'
+import { formatearEdad } from '../utils/edad'
+import type { Pregunta } from '../data/cuestionarios'
 
+type RespuestaRecibida = { idPregunta: number; respuesta: string }
+
+// Sección IX: mensaje automático comparativo
+const compararConAnterior = (puntaje: number, anterior: KidTest | null) => {
+    if (!anterior) {
+        return {
+            progreso: 'Primera evaluación',
+            mensajeProgreso: 'Esta es la primera evaluación del niño. No hay datos anteriores para comparar.'
+        }
+    }
+    if (puntaje < anterior.puntaje) {
+        return { progreso: 'Mejora', mensajeProgreso: `Mejora: el puntaje bajó de ${anterior.puntaje} a ${puntaje} respecto a la evaluación anterior.` }
+    }
+    if (puntaje === anterior.puntaje) {
+        return { progreso: 'Sin cambios', mensajeProgreso: `Sin cambios: el puntaje se mantiene en ${puntaje} respecto a la evaluación anterior.` }
+    }
+    return { progreso: 'Empeoramiento', mensajeProgreso: `Empeoramiento: el puntaje subió de ${anterior.puntaje} a ${puntaje} respecto a la evaluación anterior.` }
+}
 
 export class test_kidController {
     static evaluateKid = async (req: Request, res: Response) => {
         const { testId } = req.params
-        const { respuestas } = req.body
+        const { respuestas, personaResponde, tiempoPantallas } = req.body as {
+            respuestas: RespuestaRecibida[]
+            personaResponde: string
+            tiempoPantallas: string
+        }
 
         try {
             const test = await Test.findByPk(+testId)
-            if (!test) {
-                const error = new Error('El test no existe')
-                res.status(404).json({ message: error.message })
+            if (!test || !test.activo) {
+                res.status(404).json({ error: 'El cuestionario no existe' })
                 return
             }
 
-            // 1. Sumar el puntaje automáticamente
-            const puntajeTotal = respuestas.reduce((total: number, respuesta: any) => total + respuesta.puntaje, 0)
-
-            // 2. Sistema de Clasificación Automática
-            let clasificacion = ''
-            let mensajeAutomatico = ''
-
-            if (puntajeTotal >= 0 && puntajeTotal <= 5) {
-                clasificacion = 'Exposición a pantallas sin afectación comunicativa'
-                mensajeAutomatico = 'El desarrollo del lenguaje se encuentra acorde a la edad. Se recomienda continuar estimulando la interacción comunicativa y regular el uso de pantallas.'
-            } else if (puntajeTotal >= 6 && puntajeTotal <= 10) {
-                clasificacion = 'Exposición moderada a pantallas que pueden afectar la comunicación'
-                mensajeAutomatico = 'Se identifican algunos indicadores de alerta. Se recomienda supervisión y reducción del tiempo frente a dispositivos.'
-            } else if (puntajeTotal >= 11) {
-                clasificacion = 'Exposición excesiva a pantallas que puede afectar la comunicación'
-                mensajeAutomatico = 'Se identifican múltiples factores de riesgo. Se recomienda valoración fonoaudiológica.'
+            // El cuestionario debe corresponder a la edad actual del niño
+            const edadMeses = req.kids.edadEnMeses
+            if (edadMeses < test.minMeses || edadMeses > test.maxMeses) {
+                res.status(400).json({ error: 'El cuestionario no corresponde a la edad del niño' })
+                return
             }
 
-            // 🌟 3. LA MAGIA COMPARATIVA: Buscamos el test más reciente de este niño ANTES de guardar el nuevo
-            const evaluacionAnterior = await KidTest.findOne({
-                where: { kidId: req.kids.id },
-                order: [['fechaRealizacion', 'DESC'], ['createdAt', 'DESC']] // Traemos el último que hizo
-            })
-
-            let mensajeComparativo = "Esta es la primera evaluación del niño. No hay datos anteriores para comparar."
-            
-            if (evaluacionAnterior) {
-                if (puntajeTotal < evaluacionAnterior.puntaje) {
-                    mensajeComparativo = `¡Mejora! El puntaje bajó de ${evaluacionAnterior.puntaje} a ${puntajeTotal}.`
-                } else if (puntajeTotal === evaluacionAnterior.puntaje) {
-                    mensajeComparativo = `Sin cambios. El puntaje se mantiene en ${puntajeTotal} respecto a la evaluación anterior.`
-                } else {
-                    mensajeComparativo = `Empeoramiento. El puntaje subió de ${evaluacionAnterior.puntaje} a ${puntajeTotal}.`
+            // 1. Puntaje calculado en el servidor a partir de las opciones del cuestionario
+            const preguntas = test.preguntas as Pregunta[]
+            const detalle = []
+            for (const pregunta of preguntas) {
+                const recibida = respuestas.find(r => +r.idPregunta === pregunta.id)
+                const opcion = recibida && pregunta.opciones.find(o => o.respuesta === recibida.respuesta)
+                if (!opcion) {
+                    res.status(400).json({ error: `Falta una respuesta válida para la pregunta ${pregunta.id}` })
+                    return
                 }
+                detalle.push({
+                    idPregunta: pregunta.id,
+                    pregunta: pregunta.pregunta,
+                    respuesta: opcion.respuesta,
+                    puntaje: opcion.puntaje
+                })
             }
+            const puntaje = detalle.reduce((total, r) => total + r.puntaje, 0)
 
-            // 4. Guardar en la base de datos la nueva evaluación
+            // 2. Clasificación automática (sección VIII)
+            const nivel = clasificarPuntaje(puntaje)
+            const { clasificacion, mensaje } = NIVELES[nivel]
+
+            // 3. Indicadores identificados: respuestas que suman puntaje
+            const indicadores = detalle.filter(r => r.puntaje > 0)
+
+            // 4. Recomendaciones y actividades según edad, resultado y tipo de cuenta
+            const perfilUsuario = perfilDeParentesco(req.user.parentesco)
+            const recomendaciones = await armarRecomendaciones(test.clave, nivel, perfilUsuario, indicadores, preguntas)
+
+            // 5. Comparación con la evaluación anterior
+            const anterior = await KidTest.findOne({
+                where: { kidId: req.kids.id },
+                order: [['createdAt', 'DESC']]
+            })
+            const { progreso, mensajeProgreso } = compararConAnterior(puntaje, anterior)
+
             const evaluacion = await KidTest.create({
                 kidId: req.kids.id,
                 testId: test.id,
                 clasificacion,
-                respuestas,
-                puntaje: puntajeTotal,
-                fechaRealizacion: dayjs().format('YYYY-MM-DD')
+                nivel,
+                mensaje,
+                respuestas: detalle,
+                indicadores,
+                puntaje,
+                fechaRealizacion: dayjs().format('YYYY-MM-DD'),
+                edadMeses,
+                edadTexto: formatearEdad(edadMeses),
+                personaResponde,
+                tiempoPantallas,
+                perfilUsuario,
+                progreso,
+                mensajeProgreso,
+                recomendaciones
             })
 
-            // 5. Devolver la respuesta súper completa al frontend
             res.status(201).json({
                 message: 'Evaluación guardada exitosamente',
-                resultados: {
-                    puntajeTotal,
-                    clasificacion,
-                    mensaje: mensajeAutomatico,
-                    progreso: mensajeComparativo, // <-- Enviamos el análisis comparativo
-                    evaluacion
-                }
+                evaluacion
             })
-
         } catch (e) {
             console.log(e)
-            const error = new Error('Hubo un error al guardar la evaluación')
-            res.status(500).json({ error: error.message })
-            return
+            res.status(500).json({ error: 'Hubo un error al guardar la evaluación' })
         }
     }
 
     static getKidHistory = async (req: Request, res: Response) => {
         try {
-            // Buscamos todas las evaluaciones de este niño, ordenadas de la más reciente a la más antigua
             const historial = await KidTest.findAll({
                 where: { kidId: req.kids.id },
-                order: [['fechaRealizacion', 'DESC']]
+                attributes: ['id', 'puntaje', 'clasificacion', 'nivel', 'fechaRealizacion', 'edadTexto', 'edadMeses',
+                    'personaResponde', 'tiempoPantallas', 'progreso', 'createdAt'],
+                include: [{ model: Test, attributes: ['name', 'rango'] }],
+                order: [['createdAt', 'DESC']]
             })
-
             res.status(200).json(historial)
         } catch (e) {
             console.log(e)
-            const error = new Error('Hubo un error al obtener el historial')
-            res.status(500).json({ error: error.message })
-            return
+            res.status(500).json({ error: 'Hubo un error al obtener el historial' })
+        }
+    }
+
+    // Consultar nuevamente el resultado y las recomendaciones de una evaluación
+    static getEvaluation = async (req: Request, res: Response) => {
+        try {
+            const evaluacion = await KidTest.findOne({
+                where: { id: +req.params.evaluacionId, kidId: req.kids.id },
+                include: [{ model: Test, attributes: ['name', 'rango', 'clave'] }]
+            })
+            if (!evaluacion) {
+                res.status(404).json({ error: 'La evaluación no existe' })
+                return
+            }
+            res.status(200).json({ niño: { id: req.kids.id, name: req.kids.name }, evaluacion })
+        } catch (e) {
+            console.log(e)
+            res.status(500).json({ error: 'Hubo un error al obtener la evaluación' })
+        }
+    }
+
+    // Últimas evaluaciones de todos los niños del usuario (sección Resultados)
+    static getRecentEvaluations = async (req: Request, res: Response) => {
+        try {
+            const evaluaciones = await KidTest.findAll({
+                attributes: ['id', 'kidId', 'puntaje', 'clasificacion', 'nivel', 'fechaRealizacion', 'edadTexto', 'progreso', 'createdAt'],
+                include: [
+                    { model: Kid, attributes: ['id', 'name'], where: { userId: req.user.id } },
+                    { model: Test, attributes: ['name', 'rango'] }
+                ],
+                order: [['createdAt', 'DESC']],
+                limit: 50
+            })
+            res.status(200).json(evaluaciones)
+        } catch (e) {
+            console.log(e)
+            res.status(500).json({ error: 'Hubo un error al obtener las evaluaciones' })
+        }
+    }
+
+    // Recomendaciones y actividades entregadas en cada evaluación del niño (la más reciente primero)
+    static getKidRecommendations = async (req: Request, res: Response) => {
+        try {
+            const evaluaciones = await KidTest.findAll({
+                where: { kidId: req.kids.id },
+                attributes: ['id', 'puntaje', 'clasificacion', 'nivel', 'edadTexto', 'fechaRealizacion', 'recomendaciones', 'createdAt'],
+                include: [{ model: Test, attributes: ['name', 'rango'] }],
+                order: [['createdAt', 'DESC']]
+            })
+            res.status(200).json({ niño: { id: req.kids.id, name: req.kids.name }, evaluaciones })
+        } catch (e) {
+            console.log(e)
+            res.status(500).json({ error: 'Hubo un error al obtener las recomendaciones' })
         }
     }
 }
-

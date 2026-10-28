@@ -1,8 +1,7 @@
-import {Model, Table, Column, DataType, AllowNull, ForeignKey, BelongsTo, BelongsToMany, HasMany} from 'sequelize-typescript'
+import { Model, Table, Column, DataType, AllowNull, ForeignKey, BelongsTo, HasMany } from 'sequelize-typescript'
 import User from './User'
-import dayjs from 'dayjs'
-import Test from './Test'
 import KidTest from './KidTest'
+import { edadEnMeses, formatearEdad } from '../utils/edad'
 
 @Table({
     tableName: 'kids'
@@ -30,33 +29,18 @@ class Kid extends Model {
     @Column({
         type: DataType.VIRTUAL,
         get(this: Kid) {
-            const nacimiento = dayjs(this.getDataValue('fechaNacimiento'));
-            const hoy = dayjs();
-            
-            const mesesTotales = hoy.diff(nacimiento, 'month');
-
-            if (mesesTotales < 1) {
-                const dias = hoy.diff(nacimiento, 'day');
-                return `${dias} días`;
-            } else if (mesesTotales < 12) {
-                return `${mesesTotales} meses`;
-            } else {
-                const anios = hoy.diff(nacimiento, 'year');
-                return `${anios} años`; 
-            }
+            return formatearEdad(edadEnMeses(this.getDataValue('fechaNacimiento')))
         }
     })
-    declare edadCalculada: string;
+    declare edadCalculada: string
 
     @Column({
         type: DataType.VIRTUAL,
         get(this: Kid) {
-            const nacimiento = dayjs(this.getDataValue('fechaNacimiento'));
-            const hoy = dayjs();
-            return hoy.diff(nacimiento, 'month');
+            return edadEnMeses(this.getDataValue('fechaNacimiento'))
         }
     })
-    declare edadEnMeses: number;
+    declare edadEnMeses: number
 
     @AllowNull(false)
     @Column({
@@ -76,7 +60,7 @@ class Kid extends Model {
     })
     declare userId: number
 
-    @BelongsTo(() => User)
+    @BelongsTo(() => User, { onDelete: 'CASCADE' })
     declare user: User
 
     @HasMany(() => KidTest)

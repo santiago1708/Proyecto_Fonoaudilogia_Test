@@ -6,14 +6,16 @@ import { authenticateJWT } from '../middlewares/auth'
 import { Limiter } from '../config/limiter'
 
 const routerAuth = Router()
-routerAuth.use(Limiter)
+// El límite aplica a las rutas públicas; /profile se consulta en cada carga de la app
+routerAuth.use((req, res, next) => req.path === '/profile' ? next() : Limiter(req, res, next))
 
 routerAuth.post('/create-account',
     body('name').notEmpty().withMessage('El nombre es un campo obligatorio'),
-    body('parentesco').notEmpty().withMessage('El parentesco es un campo obligatorio'),
+    body('parentesco').isIn(['Madre', 'Padre', 'Cuidador', 'Profesional']).withMessage('Selecciona un tipo de usuario válido'),
     body('email').isEmail().withMessage('El correo electrónico no es válido'),
     body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres'),
     body('password_confirmation').custom((value, { req }) => value === req.body.password).withMessage('Las contraseñas no coinciden'),
+    body('aceptaPrivacidad').custom(value => value === true).withMessage('Debes aceptar la política de privacidad'),
     handleInputErrors,
     AuthController.createAccount)
 
