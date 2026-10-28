@@ -29,7 +29,7 @@ export const validateKidExists = async (req: Request, res: Response, next: NextF
         const kid = await Kid.findByPk(+kidId)
         if (!kid) {
             const error = new Error(`El niño con ID ${kidId} no existe`)
-            res.status(404).json({message : error.message})
+            res.status(404).json({ error: error.message })
             return
         }
         req.kids = kid
@@ -43,7 +43,7 @@ export const validateKidExists = async (req: Request, res: Response, next: NextF
 export const hasAcces = async (req: Request, res: Response, next: NextFunction) => {
     if(req.kids.userId !== req.user.id){
         const error = new Error('No tienes permiso para acceder a este recurso')
-        res.status(403).json({message : error.message})
+        res.status(403).json({ error: error.message })
         return
     }
     next()

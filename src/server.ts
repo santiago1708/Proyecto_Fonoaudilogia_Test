@@ -23,6 +23,10 @@ async function connectDB() {
 connectDB();
 const app = express();
 
+// Render (y otros servicios) ponen un proxy delante: así Express ve la IP real
+// de cada usuario y el límite de peticiones se cuenta por persona
+app.set('trust proxy', 1);
+
 app.use(cors({
     origin: process.env.FRONTEND_URL,
     credentials: true

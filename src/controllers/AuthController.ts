@@ -12,7 +12,7 @@ export class AuthController {
             const userEmailExist = await User.findOne({ where: { email } })
             if (userEmailExist) {
                 const error = new Error('El correo electrónico ya está registrado')
-                res.status(409).json({ message: error.message })
+                res.status(409).json({ error: error.message })
                 return
             }
 
@@ -48,7 +48,7 @@ export class AuthController {
             const user = await User.findOne({ where: { token } })
             if (!user) {
                 const error = new Error('Token inválido')
-                res.status(404).json({ message: error.message })
+                res.status(404).json({ error: error.message })
                 return
             }
             user.confirmed = true
