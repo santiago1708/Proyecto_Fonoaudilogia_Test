@@ -1,7 +1,6 @@
 import { NextFunction, Response, Request } from "express"
 import User from "../models/User"
 import { verifyJWT } from "../utils/jwt"
-import Kid from "../models/Kid"
 
 declare global {
     namespace Express {
@@ -14,29 +13,50 @@ declare global {
 export const authenticateJWT = async (req: Request, res: Response, next: NextFunction) => {
     const { authorization } = req.headers
     if (!authorization) {
-        const error = new Error('No autorizado')
-        res.status(401).json({ error: error.message })
+        res.status(401).json({ error: 'No autorizado' })
         return
     }
     const [, token] = authorization.split(' ')
     if (!token) {
-        const error = new Error('Token no válido')
-        res.status(401).json({ error: error.message })
+        res.status(401).json({ error: 'Token no válido' })
         return
     }
+
+    let decoded: ReturnType<typeof verifyJWT>
     try {
-        const decoded = verifyJWT(token)
-        if (typeof decoded === 'object' && decoded.id) { // Realizamos la comprobacion del tipo de dato y si existe un id
-            req.user = await User.findByPk(decoded.id, {
-                attributes: ['id', 'name', 'email', 'parentesco', 'password'], // Excluir campos sensibles como la contraseña
-                include: [Kid]
-            })
-            next()
+        decoded = verifyJWT(token)
+    } catch {
+        // Token vencido, alterado o firmado con otra clave
+        res.status(401).json({ error: 'Sesión no válida o vencida' })
+        return
+    }
+
+    if (typeof decoded !== 'object' || !decoded.id) {
+        res.status(401).json({ error: 'Token no válido' })
+        return
+    }
+
+    try {
+        // Nunca se incluye la contraseña en req.user (se envía al frontend en /auth/profile)
+        const user = await User.findByPk(decoded.id, {
+            attributes: ['id', 'name', 'email', 'parentesco', 'rol']
+        })
+        if (!user) {
+            res.status(401).json({ error: 'Usuario no encontrado' })
+            return
         }
+        req.user = user
+        next()
     } catch (e) {
         console.log(e)
-        const error = new Error('Hubo un error')
-        res.status(500).json({ error: error.message })
+        res.status(500).json({ error: 'Hubo un error' })
+    }
+}
+
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.rol !== 'admin') {
+        res.status(403).json({ error: 'Solo los administradores pueden realizar esta acción' })
         return
     }
+    next()
 }

@@ -1,4 +1,4 @@
-import {Model, Table, Column, DataType, Default, Unique, AllowNull, HasMany} from 'sequelize-typescript'
+import { Model, Table, Column, DataType, Default, Unique, AllowNull, HasMany } from 'sequelize-typescript'
 import Kid from './Kid'
 
 @Table({
@@ -41,6 +41,25 @@ class User extends Model {
         type: DataType.BOOLEAN
     })
     declare confirmed: boolean
+
+    @Default(false)
+    @Column({
+        type: DataType.BOOLEAN
+    })
+    declare aceptaPrivacidad: boolean
+
+    // usuario | admin (los administradores se asignan con `npm run admin` o desde el panel)
+    @AllowNull(false)
+    @Default('usuario')
+    @Column({
+        type: DataType.ENUM('usuario', 'admin')
+    })
+    declare rol: string
+
+    @Column({
+        type: DataType.DATE
+    })
+    declare fechaAceptacionPrivacidad: Date
 
     @HasMany(() => Kid)
     declare kids: Kid[]

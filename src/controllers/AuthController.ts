@@ -21,10 +21,17 @@ export class AuthController {
                 email,
                 password: await hashPassword(password),
                 parentesco,
-                token: generateToken()
+                token: generateToken(),
+                aceptaPrivacidad: true,
+                fechaAceptacionPrivacidad: new Date()
             })
-            await user.save()
-            await enviarCorreoConfirmacion(email, name, user.token)
+
+            try {
+                await enviarCorreoConfirmacion(email, name, user.token)
+            } catch {
+                res.status(502).json({ error: 'La cuenta se creó, pero no se pudo enviar el correo de confirmación. Contacta al administrador.' })
+                return
+            }
 
             res.status(201).json({ message: 'Cuenta creada exitosamente. Por favor, revisa tu correo para confirmar tu cuenta.' })
         } catch (e) {
@@ -104,8 +111,7 @@ export class AuthController {
 
             res.json({ message: 'Correo de recuperación enviado exitosamente' })
         } catch (e) {
-            // console.log(e)
-            const error = new Error('Hubo un error')
+            const error = new Error('No se pudo enviar el correo de recuperación. Intenta más tarde.')
             res.status(500).json({ error: error.message })
         }
     }
@@ -159,17 +165,15 @@ export class AuthController {
 
     static changePassword = async (req: Request, res: Response) => {
         const { currentPassword, newPassword } = req.body
-        const user = req.user
         try {
+            // req.user no trae la contraseña; se consulta aparte
+            const user = await User.findByPk(req.user.id)
             if (!user) {
                 const error = new Error('Usuario no autenticado')
                 res.status(401).json({ error: error.message })
                 return
             }
 
-            console.log(currentPassword); // Revisa que no sea undefined
-            console.log(user.password);
-            console.log(user);
             const passwordCorrect = await comparePassword(currentPassword, user.password)
             if (!passwordCorrect) {
                 const error = new Error('Contraseña actual incorrecta')
